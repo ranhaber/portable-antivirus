@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.1 |
+| **Version** | 0.2 |
 | **Date** | 2026-07-09 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
@@ -1003,6 +1003,21 @@ Implement:
 | LLD-OPEN-004 | Exact Python GPIO library on vendor kernel | Milestone 1 |
 | LLD-OPEN-005 | Whether progress pre-count is worth the extra enumeration pass | Milestone 3 |
 
+### 19.1 Design Decisions Still Pending Sign-Off
+
+The LLD is implementable as written. The items below are **defaults or placeholders** that need hardware validation or benchmark results before they are locked. None block starting Milestone 1 or the headless scan path in Milestone 3.
+
+| Decision | Current LLD default | Sign-off trigger | Blocks if unresolved |
+|---|---|---|---|
+| Display pin map and SPI assignment | Provisional mapping in HLD §5.5.3; `display.devices[]` empty in config | Milestone 1 bring-up on Radxa + HAT | Display service (Milestone 2) |
+| Python SPI/GPIO library | `spidev` + Radxa-compatible GPIO (library TBD) | Milestone 1 driver spike on vendor kernel 6.1.115 | `LcdHatDriver`, `buttons.py` |
+| HAT 3.3V power | Board 3.3V rail assumed sufficient | Milestone 1 current/voltage check under full backlight | Enclosure/power BOM only |
+| ClamAV execution mode | `clamav_mode: "clamd"` with `clamscan` fallback | Milestone 3 RAM/CPU benchmark on 1 GB target | Final `clamd.conf` tuning and service enablement |
+| Scan progress total count | Stream enumeration; optional pre-count not specified | Milestone 3 UX vs memory trade-off on real media | Accurate `files_total` / percent on first file only |
+| Threat meter segment count | 12 segments (HLD §12.4) | Milestone 2 visual review on 240×240 | Cosmetic only |
+
+**Sign-off rule:** When a row is resolved, update `config.json` defaults, the relevant LLD section, and close the matching `LLD-OPEN-*` item in the table above.
+
 ---
 
 ## 20. Traceability
@@ -1026,6 +1041,7 @@ Implement:
 | Version | Date | Author | Changes |
 |---|---|---|---|
 | 0.1 | 2026-07-09 | - | Initial LLD draft from SRS v1.1 and HLD v1.1 |
+| 0.2 | 2026-07-09 | - | Added §19.1 design decisions pending sign-off |
 
 ---
 

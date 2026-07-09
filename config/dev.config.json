@@ -1,0 +1,30 @@
+{
+  "version": 1,
+  "api": {
+    "bind_host": "127.0.0.1",
+    "bind_port": 8080,
+    "auth_token_hash": "$2b$12$devonlyplaceholderhashnotforproductionuse",
+    "allow_unauthenticated_read": true
+  },
+  "scan": {
+    "default_mode": "quick",
+    "clamav_mode": "clamd",
+    "max_file_size_bytes": 104857600,
+    "per_file_timeout_sec": 120,
+    "yara_enabled": true,
+    "yara_max_file_size_bytes": 52428800,
+    "hash_max_file_size_bytes": 104857600
+  },
+  "display": {
+    "refresh_hz_idle": 0.5,
+    "refresh_hz_scanning": 2.0,
+    "devices": []
+  },
+  "storage": {
+    "warn_percent": 90,
+    "block_percent": 95
+  },
+  "updates": {
+    "freshclam_schedule": "03:00"
+  }
+}

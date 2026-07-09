@@ -1,0 +1,17 @@
+Scan report: {{ scan_id }}
+Mode: {{ scan.mode }}
+Status: {{ status }}
+Started: {{ scan.started_at }}
+Ended: {{ scan.ended_at or "n/a" }}
+Files scanned: {{ scan.files_scanned }}
+Bytes scanned: {{ scan.bytes_scanned }}
+Threats: {{ threat_count }}
+
+{% if detections %}
+Detections:
+{% for item in detections %}
+- [{{ item.engine }}] {{ item.signature }} -> {{ item.file_path }}
+{% endfor %}
+{% else %}
+No threats detected.
+{% endif %}

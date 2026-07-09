@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "portable-av"
+version = "0.1.0"
+description = "Portable antivirus appliance for removable media"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    "pydantic>=2.6",
+    "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.27",
+    "pytest>=8.0",
+]
+
+[project.scripts]
+portable-av-api = "portable_av.api.app:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["portable_av*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]

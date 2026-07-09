@@ -18,6 +18,6 @@ __pycache__/
 venv/
 env/
 
-# Logs / temp
-*.log
-*.tmp
+# Local runtime data created during development
+var/
+

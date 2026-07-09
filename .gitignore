@@ -1,0 +1,23 @@
+# Secrets / provisioning config (contains passwords, Wi-Fi credentials)
+not_logged_in_yet
+*.secret
+*.key
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+
+# Logs / temp
+*.log
+*.tmp

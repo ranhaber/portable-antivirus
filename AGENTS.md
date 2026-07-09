@@ -16,7 +16,7 @@ Project context for AI agents working on this repository.
 |---|---|
 | **Host** | `192.168.7.61` |
 | **Username** | `radxa03virus` |
-| **Password** | `radxa` |
+| **Password** | Not stored in repository |
 
 ```bash
 ssh radxa03virus@192.168.7.61

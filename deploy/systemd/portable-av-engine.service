@@ -1,0 +1,17 @@
+[Unit]
+Description=Portable AV Engine/API
+After=network.target
+
+[Service]
+Type=simple
+User=portable-av
+Group=portable-av
+WorkingDirectory=/opt/portable-av
+Environment=PORTABLE_AV_CONFIG=/etc/portable-av/config.json
+Environment=PORTABLE_AV_RUNTIME=/run/portable-av
+ExecStart=/opt/portable-av/venv/bin/python -m portable_av.api.app
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

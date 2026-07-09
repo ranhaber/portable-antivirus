@@ -1,0 +1,5 @@
+# Trigger read-only mount helper when USB block devices appear.
+ACTION=="add", SUBSYSTEM=="block", KERNEL=="sd[a-z]1", ENV{ID_BUS}=="usb", TAG+="systemd", ENV{SYSTEMD_WANTS}="portable-av-mount@%k.service"
+
+# Notify engine on USB removal.
+ACTION=="remove", SUBSYSTEM=="block", KERNEL=="sd[a-z]1", ENV{ID_BUS}=="usb", RUN+="/opt/portable-av/venv/bin/python -m portable_av.mount.mount_manager --unmount --device /dev/%k"

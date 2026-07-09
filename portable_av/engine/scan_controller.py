@@ -18,6 +18,7 @@ from portable_av.common.models import ScanMode, ScanStage, ScanState, ScanStatus
 from portable_av.common.paths import AppPaths
 from portable_av.common.time import generate_scan_id, utc_now
 from portable_av.engine.clamav_adapter import ClamAvAdapter
+from portable_av.engine.event_bus import EventBus
 from portable_av.engine.file_enumerator import FileEnumerator
 from portable_av.engine.hashing import hash_file
 from portable_av.engine.progress import progress_percent
@@ -45,10 +46,12 @@ class ScanController:
         config: AppConfig,
         paths: AppPaths,
         history_repository: HistoryRepository,
+        event_bus: EventBus | None = None,
     ) -> None:
         self._config = config
         self._paths = paths
         self._history_repository = history_repository
+        self._event_bus = event_bus
         self._state = ScanState.IDLE
         self._active_scan_id: str | None = None
         self._drive: DriveInfo | None = None
@@ -92,6 +95,7 @@ class ScanController:
                 return
             self._drive = drive
             self._state = ScanState.MOUNTED if drive else ScanState.IDLE
+        await self._publish_progress()
 
     async def start_scan(
         self,
@@ -146,6 +150,7 @@ class ScanController:
                 )
             )
             self._scan_task = asyncio.create_task(self._run_scan(scan_id, mode, Path(root)))
+            await self._publish("scan_started", {"scan_id": scan_id, "mode": mode.value})
             return scan_id
 
     async def cancel_scan(self) -> None:
@@ -153,6 +158,8 @@ class ScanController:
         if self._state == ScanState.THREAT_PROMPT:
             self._threat_action = ThreatAction.STOP
             self._threat_action_event.set()
+        if self._active_scan_id:
+            await self._publish("scan_cancelled", {"scan_id": self._active_scan_id})
 
     async def handle_threat_action(self, action: ThreatAction) -> None:
         if self._state != ScanState.THREAT_PROMPT:
@@ -297,6 +304,7 @@ class ScanController:
                 )
         except Exception as exc:
             status = ScanStatus.FAILED
+            await self._publish("scan_error", {"scan_id": scan_id, "message": str(exc)})
             self._history_repository.insert_event(
                 EventRecordCreate(
                     scan_id=scan_id,
@@ -331,6 +339,16 @@ class ScanController:
                     current_file=None,
                     progress_percent=None,
                 )
+            await self._publish(
+                "scan_completed",
+                {
+                    "scan_id": scan_id,
+                    "status": status.value,
+                    "files_scanned": files_scanned,
+                    "bytes_scanned": bytes_scanned,
+                    "threats": threats,
+                },
+            )
 
     def _record_detection(
         self,
@@ -356,6 +374,18 @@ class ScanController:
                 scan_id=scan_id,
                 event_type="threat_detected",
                 message=f"[{engine}] {signature} in {file_path}",
+            )
+        )
+        asyncio.create_task(
+            self._publish(
+                "threat_detected",
+                {
+                    "scan_id": scan_id,
+                    "engine": engine,
+                    "signature": signature,
+                    "file_path": file_path,
+                    "sha256": sha256,
+                },
             )
         )
 
@@ -394,6 +424,7 @@ class ScanController:
         bytes_scanned: int | None = None,
         threats: int | None = None,
     ) -> None:
+        previous_stage = self._progress.stage
         self._progress = ScanProgress(
             scan_id=self._progress.scan_id,
             state=ScanState.SCANNING,
@@ -408,3 +439,35 @@ class ScanController:
                 self._progress.files_total,
             ),
         )
+        asyncio.create_task(self._publish_progress())
+        if previous_stage != stage:
+            asyncio.create_task(
+                self._publish(
+                    "stage_changed",
+                    {
+                        "scan_id": self._progress.scan_id,
+                        "stage": stage.value,
+                    },
+                )
+            )
+
+    async def _publish_progress(self) -> None:
+        await self._publish("scan_progress", self._progress_payload())
+
+    def _progress_payload(self) -> dict:
+        return {
+            "scan_id": self._progress.scan_id,
+            "state": self._progress.state.value,
+            "stage": self._progress.stage.value if self._progress.stage else None,
+            "files_total": self._progress.files_total,
+            "files_scanned": self._progress.files_scanned,
+            "bytes_scanned": self._progress.bytes_scanned,
+            "threats": self._progress.threats,
+            "current_file": self._progress.current_file,
+            "progress_percent": self._progress.progress_percent,
+        }
+
+    async def _publish(self, event_type: str, payload: dict) -> None:
+        if self._event_bus is None:
+            return
+        await self._event_bus.publish(event_type, payload)

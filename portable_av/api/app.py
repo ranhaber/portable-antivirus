@@ -8,8 +8,11 @@ from fastapi import FastAPI
 from portable_av import __version__
 from portable_av.api.dependencies import AppState, build_app_state
 from portable_av.api.error_handlers import portable_av_exception_handler
+from portable_av.api.routes_drive import router as drive_router
+from portable_av.api.routes_internal import router as internal_router
 from portable_av.api.routes_scan import router as scan_router
 from portable_av.api.routes_status import router as status_router
+from portable_av.api.websocket import router as websocket_router
 from portable_av.common.config_loader import load_config
 from portable_av.common.errors import PortableAvError
 from portable_av.common.logging import setup_logging
@@ -38,7 +41,10 @@ def create_app(config_path: Path | None = None) -> FastAPI:
     app.state.app_state = build_app_state(config=config, paths=paths)
     app.add_exception_handler(PortableAvError, portable_av_exception_handler)
     app.include_router(status_router, prefix="/api/v1")
+    app.include_router(drive_router, prefix="/api/v1")
     app.include_router(scan_router, prefix="/api/v1")
+    app.include_router(internal_router, prefix="/api/v1")
+    app.include_router(websocket_router, prefix="/api/v1")
     return app
 
 

@@ -5,14 +5,15 @@
 | Field | Value |
 |---|---|
 | **Document ID** | PLAN-PAV-001 |
-| **Version** | 0.1 |
-| **Date** | 2026-07-09 |
-| **Status** | Initial implementation plan |
+| **Version** | 0.2 |
+| **Date** | 2026-07-10 |
+| **Status** | In progress — Day 3 active |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
 | **Source Design** | `LLD.md` v0.2 |
 | **Target Hardware** | Radxa Zero 3W, 1 GB LPDDR4, 32 GB microSD, Waveshare Zero LCD HAT (A) |
 | **Target OS** | Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115 |
+| **Repository** | https://github.com/ranhaber/portable-antivirus.git |
 
 ---
 
@@ -24,7 +25,28 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 
 ---
 
-## 2. Planning Assumptions
+## 2. Current Progress Snapshot
+
+| Phase / Day | Status | Evidence |
+|---|---|---|
+| P0 Project skeleton | **Done** | `portable_av/` package, config, tests, `pyproject.toml` |
+| P1 Radxa OS foundation | **Done** | Radxa clones repo, venv, `pytest` 7/7 pass, API starts |
+| Day 1 scaffolding | **Done** | Modular package layout, `/api/v1/status`, SQLite bootstrap |
+| Day 2 headless scan core | **Done** | Enumerator, ClamAV/YARA adapters, scan controller, reports, CLI |
+| Day 3 mount/API/events | **In progress** | Mount helper, internal drive endpoint, WebSocket, deploy assets |
+| P5 display simulator | **Started** | `tools/display_simulator.py` |
+| P6 display HAT bring-up | **Blocked** | Waiting for HAT hardware (~3 days) |
+
+**Radxa validated (2026-07-10):**
+
+- `git clone https://github.com/ranhaber/portable-antivirus.git`
+- `pip install -r requirements-dev.txt`
+- `pytest` → 7 passed
+- `python -m portable_av.api.app` → Uvicorn on `http://127.0.0.1:8080`
+
+---
+
+## 3. Planning Assumptions
 
 - The fixed target board is Radxa Zero 3W with 1 GB RAM and 32 GB microSD.
 - The OS baseline is Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115.
@@ -35,19 +57,20 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 - Source media is never quarantined, deleted, or modified.
 - Display-specific work can use a simulator until the HAT arrives.
 - `clamd` is the default design target, with `clamscan` fallback preserved until Radxa benchmarks are complete.
+- Radxa pulls code from GitHub public repo, same workflow as other Radxa projects.
 
 ---
 
-## 3. Open Decisions and Gates
+## 4. Open Decisions and Gates
 
-No open decision blocks starting implementation. The items below are planned validation gates.
+No open decision blocks Day 3 work. The items below are planned validation gates.
 
 | Gate | Decision | Current Default | Resolution Point |
 |---|---|---|---|
 | GATE-001 | Display pin map and SPI assignment | Provisional HLD mapping | Display HAT bring-up |
 | GATE-002 | Python SPI/GPIO library | `spidev` plus Radxa-compatible GPIO library TBD | Display HAT bring-up |
 | GATE-003 | HAT 3.3V power sufficiency | Board 3.3V rail assumed sufficient | Display HAT power test |
-| GATE-004 | ClamAV mode | `clamd` preferred, `clamscan` fallback | Headless scan benchmark |
+| GATE-004 | ClamAV mode | `clamd` preferred, `clamscan` fallback | Headless scan benchmark on Radxa |
 | GATE-005 | Progress percentage strategy | Streaming enumeration; optional pre-count | Real-media scan UX benchmark |
 | GATE-006 | Threat meter segment count | 12 segments | Display visual review |
 
@@ -55,122 +78,104 @@ If a gate fails, update `LLD.md` §19.1 and the affected configuration defaults 
 
 ---
 
-## 4. Phase Overview
+## 5. Phase Overview
 
-| Phase | Name | Can Start Now | Primary Output |
+| Phase | Name | Status | Primary Output |
 |---|---|---|---|
-| P0 | Project Skeleton and Dev Tooling | Yes | Python package, config, install layout |
-| P1 | Target OS and Board Foundation | Yes | Radxa boots, SSH works, required packages installed |
-| P2 | Headless Scan Core | Yes | Scan controller, ClamAV/YARA, reports, history |
-| P3 | Read-Only Mount Flow | Yes | udev/systemd mount helper, read-only media handling |
-| P4 | REST API and WebSocket | Yes | Local/LAN API for scan control and progress |
-| P5 | Display Simulator | Yes | Terminal/mock display and button client |
-| P6 | Display HAT Bring-Up | After HAT arrives | Validated SPI/GPIO/power/pin map |
-| P7 | Integrated Appliance Loop | After P2-P6 | Button-driven end-to-end scanner |
-| P8 | Hardening and Acceptance | After integration | v1 prototype acceptance pass |
+| P0 | Project Skeleton and Dev Tooling | Done | Python package, config, install layout |
+| P1 | Target OS and Board Foundation | Done | Radxa boots, SSH works, git clone, venv |
+| P2 | Headless Scan Core | Done | Scan controller, ClamAV/YARA, reports, history |
+| P3 | Read-Only Mount Flow | In progress | udev/systemd mount helper, read-only media handling |
+| P4 | REST API and WebSocket | In progress | Local/LAN API for scan control and progress |
+| P5 | Display Simulator | Started | Terminal/mock display and button client |
+| P6 | Display HAT Bring-Up | Blocked | Validated SPI/GPIO/power/pin map |
+| P7 | Integrated Appliance Loop | Pending | Button-driven end-to-end scanner |
+| P8 | Hardening and Acceptance | Pending | v1 prototype acceptance pass |
 
 ---
 
-## 5. Three-Day Headless Sprint
+## 6. Three-Day Headless Sprint
 
-### Day 1: OS, Skeleton, and Local Scaffolding
+### Day 1: OS, Skeleton, and Local Scaffolding — **DONE**
 
 Goal: make the project runnable on development machine and target board.
 
-Tasks:
+Completed:
 
-- Flash Armbian Ubuntu 24.04 Noble Minimal vendor image to 32 GB microSD.
-- Configure hostname, admin user, SSH key, Wi-Fi client mode, timezone, and locale.
-- Confirm SSH login and disable password login.
-- Install base packages: Python 3, `venv`, `pip`, ClamAV, YARA, SQLite, `exfatprogs`, `ntfs-3g`, `udev`, `systemd` tooling.
-- Create Python package skeleton from `LLD.md` §4.
-- Add default config file template for `/etc/portable-av/config.json`.
-- Add local development config under `config/dev.config.json`.
-- Add initial logging setup.
-- Add SQLite migration/bootstrap module.
-- Add placeholder `install.sh` with directory creation and system user setup steps.
-
-Deliverables:
-
-- `portable_av/` package exists and imports cleanly.
-- `python -m portable_av.api.app` or equivalent dev entry point starts.
-- SQLite database can be created locally.
-- Target board is reachable over SSH.
+- Radxa reachable over SSH; Python 3, venv, pip, ClamAV installed.
+- Modular `portable_av/` package from `LLD.md` §4.
+- Config templates under `config/`.
+- SQLite migration/bootstrap module.
+- FastAPI app with `GET /api/v1/status`.
+- GitHub repo published; Radxa clones successfully.
 
 Exit checks:
 
-- `python -m compileall portable_av` passes.
-- Config validation accepts default config.
-- Radxa reports vendor kernel 6.1.115.
+- [x] `python -m compileall portable_av` passes
+- [x] Config validation accepts default config
+- [x] Radxa runs `pytest` and starts API
 
-### Day 2: Headless Scan Engine
+### Day 2: Headless Scan Engine — **DONE**
 
 Goal: scan files without display hardware.
 
-Tasks:
+Completed:
 
-- Implement core enums and dataclasses/Pydantic models.
-- Implement `FileEnumerator` with Quick Scan extension filter.
-- Implement `ClamAvAdapter` with output parsing and timeout handling.
-- Implement `YaraAdapter` with rule compilation, scan, and last-known-good behavior.
-- Implement `HistoryRepository` methods for scans, detections, events, and signature updates.
-- Implement `ScanController` state transitions for `IDLE`, `MOUNTED`, `SCANNING`, `THREAT_PROMPT`, `COMPLETE`, and `ERROR`.
-- Implement cancellation and threat action handling.
-- Implement `ReportWriter` for TXT and HTML.
-- Add EICAR fixture procedure for validation.
-
-Deliverables:
-
-- A CLI/dev path can run Quick Scan against a local fixture directory.
-- EICAR detection is recorded.
-- TXT and HTML reports are generated.
-- History persists after restart.
+- Core enums, dataclasses, and Pydantic models.
+- `FileEnumerator` with Quick Scan extension filter.
+- `ClamAvAdapter` and `YaraAdapter`.
+- `HistoryRepository` CRUD for scans, detections, and events.
+- `ScanController` state machine with cancel and threat prompt.
+- `ReportWriter` for TXT and HTML.
+- Scan API routes: `POST/DELETE /scan`, `GET /scan/progress`, `POST /scan/threat-action`.
+- Headless CLI: `python -m portable_av.engine.cli`.
 
 Exit checks:
 
-- Clean fixture reports `CLEAN`.
-- EICAR fixture reports threat.
-- Cancelled scan writes partial report.
-- No source file is modified during scan.
+- [x] Clean fixture scans complete and write reports
+- [x] Mocked/API scan path records history
+- [x] Cancel path implemented
+- [ ] Live EICAR detection on Radxa with real ClamAV (pending Radxa scan test)
 
-### Day 3: Mount, API, Events, and Simulator
+### Day 3: Mount, API, Events, and Simulator — **IN PROGRESS**
 
 Goal: prove the appliance behavior headlessly.
 
 Tasks:
 
-- Implement mount device inspection using `lsblk`/`blkid`.
-- Implement read-only mount helper and unmount flow.
-- Draft `udev` rule and `portable-av-mount@.service`.
-- Implement internal drive notification endpoint.
-- Implement FastAPI app factory and dependency providers.
-- Implement REST endpoints for status, drive, scan start/cancel/progress, history, reports, config, and updates.
-- Implement bearer-token auth for write endpoints.
-- Implement in-process `EventBus`.
-- Implement WebSocket event stream.
-- Implement display simulator that renders main, aux-left, and aux-right state in terminal.
-- Implement simulated button actions through keyboard or REST calls.
+- [x] Implement mount device inspection using `lsblk`/`blkid`
+- [x] Implement read-only mount helper and unmount flow
+- [x] Draft `udev` rule and `portable-av-mount@.service` under `deploy/`
+- [x] Implement internal drive notification endpoint (`POST /api/v1/internal/drive`)
+- [x] Implement `GET /api/v1/drive`
+- [x] Implement in-process `EventBus`
+- [x] Implement WebSocket event stream (`WS /api/v1/scan/events`)
+- [x] Implement display simulator (`tools/display_simulator.py`)
+- [ ] Install deploy assets on Radxa and validate USB read-only mount
+- [ ] Validate WebSocket live events during a real scan on Radxa
+- [ ] Validate simulator against running engine
 
 Deliverables:
 
-- USB flash drive mounts read-only.
+- USB flash drive mounts read-only via mount helper.
 - API can start/cancel Quick Scan.
 - WebSocket emits progress and threat events.
 - Simulator shows scan state, progress, and threat prompt.
 
 Exit checks:
 
-- `mount` shows `ro,nosuid,nodev,noexec` for external media.
-- `POST /api/v1/scan` starts a scan.
-- `DELETE /api/v1/scan` cancels within 5 seconds.
-- WebSocket receives `scan_started`, `scan_progress`, `threat_detected`, and `scan_completed`.
-- TXT/HTML reports are downloadable through API.
+- [ ] `mount` shows `ro,nosuid,nodev,noexec` for external media
+- [x] `POST /api/v1/scan` starts a scan (unit tested)
+- [x] `DELETE /api/v1/scan` cancels scan (implemented)
+- [x] WebSocket receives `drive_mounted` (unit tested)
+- [ ] WebSocket receives `scan_started`, `scan_progress`, `threat_detected`, `scan_completed` on Radxa
+- [ ] TXT/HTML reports downloadable through API
 
 ---
 
-## 6. Display Arrival Plan
+## 7. Display Arrival Plan
 
-### Day 4: Display HAT Bring-Up
+### Day 4: Display HAT Bring-Up — **BLOCKED (hardware)**
 
 Goal: close display hardware gates.
 
@@ -188,237 +193,84 @@ Tasks:
 - Update `config.json` display device mapping.
 - Update `LLD.md` open items and sign-off table.
 
-Deliverables:
-
-- Confirmed display pin map.
-- Confirmed Python SPI/GPIO library.
-- Confirmed power path or regulator requirement.
-- Bring-up scripts under `tools/bringup/`.
-
-Exit checks:
-
-- Main display shows test image.
-- Both auxiliary displays show test images.
-- Buttons produce debounced events.
-- System stays stable for 30 minutes with displays active.
-
 ---
 
-## 7. Full Implementation Phases
+## 8. Remaining Implementation Phases
 
-### P0: Project Skeleton and Dev Tooling
-
-Tasks:
-
-- Create package layout from LLD.
-- Add Python virtual environment instructions.
-- Add dependency file.
-- Add config templates.
-- Add basic logging and paths helpers.
-- Add initial tests folder.
+### P3: Read-Only Mount Flow — In progress
 
 Done when:
 
-- Package imports cleanly.
-- Config can be loaded and validated.
-- Empty app starts locally.
-
-### P1: Target OS and Board Foundation
-
-Tasks:
-
-- Flash and configure target OS.
-- Verify SSH and Wi-Fi.
-- Install packages.
-- Create `portable-av` user and directories.
-- Prepare systemd unit drafts.
-
-Done when:
-
-- Board can run the empty app as a service.
-- Required packages are installed.
-- SSH key login works and password login is disabled.
-
-### P2: Headless Scan Core
-
-Tasks:
-
-- Implement scan models.
-- Implement file enumeration.
-- Implement ClamAV adapter.
-- Implement YARA adapter.
-- Implement scan controller.
-- Implement reports.
-- Implement SQLite repository.
-
-Done when:
-
-- Quick Scan and Full Scan run against mounted or local fixture paths.
-- EICAR detection is reported.
-- Reports and history are generated.
-
-### P3: Read-Only Mount Flow
-
-Tasks:
-
-- Implement device inspection.
-- Implement filesystem allowlist.
-- Implement read-only mount commands.
-- Implement unmount handling.
-- Implement udev/systemd integration.
-- Implement internal engine notification.
-
-Done when:
-
-- FAT32, exFAT, NTFS, and ext volumes mount read-only.
+- FAT32, exFAT, NTFS, and ext volumes mount read-only on Radxa.
 - Unsupported filesystems produce clear errors.
 - Media removal is reported without crashing the engine.
 
-### P4: REST API and WebSocket
-
-Tasks:
-
-- Implement app factory.
-- Implement API schemas.
-- Implement auth.
-- Implement scan/status/drive/history/config/update routes.
-- Implement WebSocket event stream.
-- Add OpenAPI review.
+### P4: REST API and WebSocket — In progress
 
 Done when:
 
-- API can run the headless scan prototype.
-- WebSocket clients receive live events.
+- API can run the headless scan prototype on Radxa.
+- WebSocket clients receive live scan events during real scans.
 - Write operations require auth.
 
 ### P5: Display Simulator
 
-Tasks:
-
-- Implement event-stream client.
-- Render main/aux-left/aux-right state in terminal.
-- Simulate button navigation.
-- Validate threat prompt behavior.
-
 Done when:
 
-- End-to-end scan can be operated without real display hardware.
+- End-to-end scan can be observed without real display hardware.
 - UI state transitions are visible and match SRS.
 
-### P6: Real Display Service
+### P6–P8
 
-Tasks:
-
-- Implement `LcdHatDriver`.
-- Implement screen renderers.
-- Implement button GPIO input.
-- Implement display manager reconnect behavior.
-- Convert simulator states into real display frames.
-
-Done when:
-
-- `portable-av-display.service` starts at boot.
-- Displays show idle/status/progress/threat states.
-- Buttons trigger REST actions.
-
-### P7: Integrated Appliance Loop
-
-Tasks:
-
-- Connect mount events, engine, API, display, and reports.
-- Implement threat prompt continue/stop/details across display and API.
-- Implement storage threshold enforcement.
-- Add Web UI static pages or minimal operational UI.
-- Validate scan without browser connected.
-
-Done when:
-
-- Insert drive, choose scan, see progress, detect EICAR, and view report.
-- Detection works with no browser or Web UI client connected.
-
-### P8: Hardening and Acceptance
-
-Tasks:
-
-- Run acceptance criteria from `SRS.md` §11.
-- Run validation checklist from `HLD.md` §21.
-- Tune ClamAV limits.
-- Decide `clamd` vs `clamscan`.
-- Tune progress strategy.
-- Review logs and SD write volume.
-- Update SRS/HLD/LLD if validation changes any decision.
-
-Done when:
-
-- Core acceptance criteria pass.
-- Validation gates are closed or explicitly deferred.
-- Known limitations are documented.
+Unchanged from original plan. See prior phase descriptions in git history if needed.
 
 ---
 
-## 8. Task Dependency Map
+## 9. Radxa Development Workflow
 
-```text
-P0 Project Skeleton
-  -> P2 Headless Scan Core
-  -> P4 API/WebSocket
-  -> P5 Display Simulator
+Clone or update on the board:
 
-P1 Target OS
-  -> P3 Read-Only Mount Flow
-  -> P2/P4 on target board
+```bash
+cd ~
+git clone https://github.com/ranhaber/portable-antivirus.git
+# or, for updates:
+cd ~/portable-antivirus && git pull
 
-Display HAT arrival
-  -> P6 Real Display Service
-  -> P7 Integrated Appliance Loop
-
-P2 + P3 + P4 + P6
-  -> P7 Integrated Appliance Loop
-  -> P8 Hardening and Acceptance
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+pytest
+PORTABLE_AV_CONFIG=config/dev.config.json python -m portable_av.api.app
 ```
 
----
+Deploy mount integration (after `git pull` with Day 3 deploy assets):
 
-## 9. Verification Plan
+```bash
+sudo cp deploy/udev/99-portable-av.rules /etc/udev/rules.d/
+sudo cp deploy/systemd/portable-av-engine.service /etc/systemd/system/
+sudo cp deploy/systemd/portable-av-mount@.service /etc/systemd/system/
+sudo udevadm control --reload-rules
+sudo systemctl daemon-reload
+```
 
-### 9.1 Developer Checks
+Display simulator (separate terminal):
 
-- Import/package check.
-- Unit tests for config, enumerator, adapter parsers, repository, scan controller, and API routes.
-- Static linting/formatting once project tooling is selected.
-- Local fixture scans.
-
-### 9.2 Target Checks
-
-- OS version and kernel check.
-- SSH key login check.
-- Package install check.
-- Read-only mount check.
-- ClamAV/YARA scan check.
-- API/WebSocket scan check.
-- systemd restart check.
-
-### 9.3 Acceptance Criteria Coverage
-
-| Acceptance Area | Covered In |
-|---|---|
-| Core scanning AC-001 to AC-006 | P2, P3, P7, P8 |
-| UI AC-010 to AC-014 | P5, P6, P7, P8 |
-| API/network AC-020 to AC-023 | P4, P7, P8 |
-| Data/update AC-030 to AC-033 | P2, P4, P8 |
-| Security AC-040 to AC-042 | P3, P8 |
+```bash
+source .venv/bin/activate
+python tools/display_simulator.py
+```
 
 ---
 
 ## 10. Immediate Next Actions
 
-1. Create project skeleton and dependency file.
-2. Add config models and default config template.
-3. Add SQLite migration/bootstrap module.
-4. Add `FileEnumerator` and Quick Scan filter.
-5. Add ClamAV adapter and EICAR validation path.
-6. Add minimal FastAPI app with `/api/v1/status`.
-7. Bring up Radxa OS in parallel if the board is available.
+1. Push Day 3 code to GitHub.
+2. On Radxa: `git pull`, reinstall deps, rerun `pytest`.
+3. Install `deploy/` udev/systemd assets on Radxa.
+4. Insert USB flash drive and verify read-only mount + `GET /api/v1/drive`.
+5. Run a real Quick Scan on mounted media; confirm WebSocket progress events.
+6. Run `tools/display_simulator.py` against the live engine.
+7. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
 
 ---
 
@@ -431,14 +283,16 @@ P2 + P3 + P4 + P6
 | udev complexity | Duplicate events, partitions vs whole disk confusion | Debounce by UUID/device path, only mount supported partitions |
 | Display delay | Real UI blocked | Continue simulator-driven integration |
 | HAT power draw | Reboots, display flicker | Add external 3.3V regulator and document wiring |
+| Private repo clone issues | GitHub password prompt on Radxa | Keep repo public like other Radxa projects |
 
 ---
 
 ## 12. Document History
 
-| Version | Date | Author | Changes |
-|---|---|---|---|
-| 0.1 | 2026-07-09 | - | Initial implementation plan from SRS v1.1, HLD v1.1, and LLD v0.2 |
+| Version | Date | Changes |
+|---|---|---|
+| 0.1 | 2026-07-09 | Initial implementation plan from SRS v1.1, HLD v1.1, and LLD v0.2 |
+| 0.2 | 2026-07-10 | Marked Day 1–2 done, Radxa git validation, Day 3 scope and progress, deploy workflow |
 
 ---
 

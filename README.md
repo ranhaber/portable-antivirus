@@ -11,7 +11,7 @@ Headless prototype validated on Radxa Zero 3W (2026-07-10):
 - Real NTFS USB mounted read-only and reported via API
 - Quick Scan completed through ClamAV/YARA pipeline (3 files, 0 threats)
 - WebSocket events and display simulator working against live engine
-- Deploy wrapper installed on Radxa; systemd mount service and removal wrapper validated
+- Deploy wrapper installed on Radxa; systemd mount service, removal wrapper, and synthetic udev trigger validated
 
 Remaining before v1 prototype: physical unplug/re-plug udev validation, optional EICAR threat-path test, engine systemd service, display HAT integration.
 

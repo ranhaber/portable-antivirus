@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.4 |
+| **Version** | 0.5 |
 | **Date** | 2026-07-10 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
@@ -1031,6 +1031,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | WebSocket stages | `enumerating` → `clamav` → `hashing` → `yara` → `reporting` → `scan_completed` |
 | Auto-mount deploy | `203/EXEC` fixed by env-file wrapper; `portable-av-mount@sda1.service` validated with `status=0/SUCCESS` |
 | Removal wrapper | `/usr/local/bin/portable-av-mount --unmount --device /dev/sda1` updates API state to idle |
+| Synthetic udev trigger | `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1` starts the mount service |
 | Remaining validation | Physical unplug/re-plug udev trigger |
 
 **OS dependency:** add `ntfs-3g` to Radxa package list for NTFS USB drives. FAT32/exFAT/ext4 paths use standard `mount`.
@@ -1061,6 +1062,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | 0.2 | 2026-07-09 | - | Added §19.1 design decisions pending sign-off |
 | 0.3 | 2026-07-10 | - | Added §19.2 Radxa headless validation notes (mount, scan, WebSocket) |
 | 0.4 | 2026-07-10 | - | Updated §19.2 with deploy install, systemd mount, and removal-wrapper validation |
+| 0.5 | 2026-07-10 | - | Added synthetic udev trigger validation |
 
 ---
 

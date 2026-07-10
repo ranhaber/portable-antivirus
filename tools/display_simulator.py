@@ -25,6 +25,13 @@ def _render(payload: dict) -> str:
         return "[aux-left] Drive removed"
     if event_type == "threat_detected":
         return f"[main] THREAT {body.get('signature')} in {body.get('file_path')}"
+    if event_type == "scan_completed":
+        return (
+            f"[main] complete {body.get('status')} "
+            f"{body.get('files_scanned')} files threats={body.get('threats')}"
+        )
+    if event_type == "scan_started":
+        return f"[main] started {body.get('mode')} scan_id={body.get('scan_id')}"
     return f"[event] {event_type} {json.dumps(body, sort_keys=True)}"
 
 

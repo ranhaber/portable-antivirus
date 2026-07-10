@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.2 |
+| **Version** | 0.3 |
 | **Date** | 2026-07-09 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
@@ -1018,6 +1018,21 @@ The LLD is implementable as written. The items below are **defaults or placehold
 
 **Sign-off rule:** When a row is resolved, update `config.json` defaults, the relevant LLD section, and close the matching `LLD-OPEN-*` item in the table above.
 
+### 19.2 Radxa Validation Notes (2026-07-10)
+
+Headless Milestone 3 validation on Radxa Zero 3W:
+
+| Item | Result |
+|---|---|
+| NTFS USB read-only mount | Works with `ntfs-3g` package installed |
+| Mount flags | `ro,nosuid,nodev,noexec` via `mount_manager` |
+| Internal drive callback | `POST /api/v1/internal/drive` → engine state + WebSocket `drive_mounted` |
+| Quick Scan on real media | 3 files, 67,930,968 bytes, 0 threats |
+| WebSocket stages | `enumerating` → `clamav` → `hashing` → `yara` → `reporting` → `scan_completed` |
+| Auto-mount via udev | Failed with `203/EXEC` (hardcoded `/opt/portable-av/venv/`); fixed by env-file wrapper in `deploy/` |
+
+**OS dependency:** add `ntfs-3g` to Radxa package list for NTFS USB drives. FAT32/exFAT/ext4 paths use standard `mount`.
+
 ---
 
 ## 20. Traceability
@@ -1042,6 +1057,7 @@ The LLD is implementable as written. The items below are **defaults or placehold
 |---|---|---|---|
 | 0.1 | 2026-07-09 | - | Initial LLD draft from SRS v1.1 and HLD v1.1 |
 | 0.2 | 2026-07-09 | - | Added §19.1 design decisions pending sign-off |
+| 0.3 | 2026-07-10 | - | Added §19.2 Radxa headless validation notes (mount, scan, WebSocket) |
 
 ---
 

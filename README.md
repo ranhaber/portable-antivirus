@@ -6,7 +6,13 @@ The appliance is designed to scan USB flash drives, low-power portable SSDs, SD 
 
 ## Status
 
-Design baseline and provisioning scripts are in place. Prototype hardware validation and implementation are still pending.
+Headless prototype validated on Radxa Zero 3W (2026-07-10):
+
+- Real NTFS USB mounted read-only and reported via API
+- Quick Scan completed through ClamAV/YARA pipeline (3 files, 0 threats)
+- WebSocket events and display simulator working against live engine
+
+Remaining before v1 prototype: plug-in auto-mount install, optional EICAR threat-path test, engine systemd service, display HAT integration.
 
 ## Target Platform
 
@@ -38,6 +44,7 @@ Design baseline and provisioning scripts are in place. Prototype hardware valida
 - `config/` - development and example configuration files.
 - `tests/` - module-aligned unit and API tests.
 - `tools/` - bring-up helpers and display simulator.
+- `deploy/` - udev rules, systemd units, env-file wrapper, dev install script.
 - `bind_sd.ps1` - Windows helper for binding the SD card into WSL workflows.
 - `mount_sd.ps1` - Windows helper for mounting SD media.
 - `sd_check.sh` - Linux shell helper for checking SD/media state.
@@ -82,14 +89,42 @@ python -m portable_av.api.app
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon
-git clone <repo-url> portable-antivirus
+sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon ntfs-3g
+git clone https://github.com/ranhaber/portable-antivirus.git
 cd portable-antivirus
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-dev.txt
 pytest
 PORTABLE_AV_CONFIG=config/dev.config.json python -m portable_av.api.app
+```
+
+USB auto-mount (development checkout):
+
+```bash
+sudo sh deploy/install-dev.sh
+```
+
+Manual mount test:
+
+```bash
+sudo PORTABLE_AV_RUNTIME=$PWD/var/run/portable-av .venv/bin/python -m portable_av.mount.mount_manager --device /dev/sda1
+```
+
+Start Quick Scan (API must be running):
+
+```bash
+curl -s -X POST http://127.0.0.1:8080/api/v1/scan \
+  -H "Authorization: Bearer dev" \
+  -H "Content-Type: application/json" \
+  -d '{"mode": "quick"}' | python -m json.tool
+```
+
+Display simulator (separate terminal):
+
+```bash
+source .venv/bin/activate
+python tools/display_simulator.py
 ```
 
 Headless fixture scan:
@@ -103,6 +138,10 @@ Status endpoint for the skeleton:
 
 ```text
 GET http://127.0.0.1:8080/api/v1/status
+GET http://127.0.0.1:8080/api/v1/drive
+GET http://127.0.0.1:8080/api/v1/scan/progress
+POST http://127.0.0.1:8080/api/v1/scan  (body: {"mode":"quick"|"full"}, Bearer auth)
+WS  ws://127.0.0.1:8080/api/v1/scan/events
 ```
 
 ## Security Notes

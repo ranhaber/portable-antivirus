@@ -6,10 +6,7 @@ After=dev-%i.device
 
 [Service]
 Type=oneshot
-Environment=PORTABLE_AV_RUNTIME=/run/portable-av
-Environment=PORTABLE_AV_API_HOST=127.0.0.1
-Environment=PORTABLE_AV_API_PORT=8080
-ExecStart=/opt/portable-av/venv/bin/python -m portable_av.mount.mount_manager --device /dev/%i
+ExecStart=/usr/local/bin/portable-av-mount --device /dev/%i
 RemainAfterExit=yes
 
 [Install]

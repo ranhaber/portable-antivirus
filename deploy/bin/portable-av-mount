@@ -1,0 +1,18 @@
+#!/bin/sh
+# Wrapper that runs the read-only mount helper from any install location.
+# Reads install paths from an environment file so systemd/udev do not need
+# hardcoded paths. Works for both /opt/portable-av and a home checkout.
+set -e
+
+ENV_FILE="${PORTABLE_AV_ENV_FILE:-/etc/portable-av/portable-av.env}"
+if [ -f "$ENV_FILE" ]; then
+    set -a
+    . "$ENV_FILE"
+    set +a
+fi
+
+: "${PORTABLE_AV_INSTALL_DIR:=/opt/portable-av}"
+: "${PORTABLE_AV_PYTHON:=$PORTABLE_AV_INSTALL_DIR/.venv/bin/python}"
+
+cd "$PORTABLE_AV_INSTALL_DIR"
+exec "$PORTABLE_AV_PYTHON" -m portable_av.mount.mount_manager "$@"

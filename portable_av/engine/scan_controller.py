@@ -187,7 +187,7 @@ class ScanController:
         report_html_path: str | None = None
 
         try:
-            self._set_progress(stage=ScanStage.ENUMERATING, current_file=None)
+            await self._set_progress(stage=ScanStage.ENUMERATING, current_file=None)
             for candidate in self._enumerator.enumerate(root, mode):
                 if self._cancel_requested:
                     status = ScanStatus.CANCELLED
@@ -196,7 +196,7 @@ class ScanController:
                     skipped_large += 1
                     continue
 
-                self._set_progress(
+                await self._set_progress(
                     stage=ScanStage.CLAMAV,
                     current_file=candidate.relative_path,
                     files_scanned=files_scanned,
@@ -219,7 +219,7 @@ class ScanController:
 
                 file_hash = None
                 if candidate.size_bytes <= self._config.scan.hash_max_file_size_bytes:
-                    self._set_progress(stage=ScanStage.HASHING, current_file=candidate.relative_path)
+                    await self._set_progress(stage=ScanStage.HASHING, current_file=candidate.relative_path)
                     try:
                         file_hash = hash_file(
                             candidate.path,
@@ -231,7 +231,7 @@ class ScanController:
                 stop_scan = False
                 if not clam_result.clean and clam_result.signature:
                     threats += 1
-                    self._record_detection(
+                    await self._record_detection(
                         scan_id,
                         engine="clamav",
                         signature=clam_result.signature,
@@ -242,7 +242,7 @@ class ScanController:
                         stop_scan = True
 
                 if not stop_scan and self._config.scan.yara_enabled and candidate.size_bytes <= self._config.scan.yara_max_file_size_bytes:
-                    self._set_progress(stage=ScanStage.YARA, current_file=candidate.relative_path)
+                    await self._set_progress(stage=ScanStage.YARA, current_file=candidate.relative_path)
                     for yara_result in await self._yara.scan_file(
                         candidate.path,
                         self._config.scan.per_file_timeout_sec,
@@ -250,7 +250,7 @@ class ScanController:
                         if yara_result.clean or not yara_result.signature:
                             continue
                         threats += 1
-                        self._record_detection(
+                        await self._record_detection(
                             scan_id,
                             engine="yara",
                             signature=yara_result.signature,
@@ -274,7 +274,7 @@ class ScanController:
                         threat_count=threats,
                     )
 
-            self._set_progress(stage=ScanStage.REPORTING, current_file=None)
+            await self._set_progress(stage=ScanStage.REPORTING, current_file=None)
             report_dir = self._paths.reports / scan_id
             scan_record = self._history_repository.get_scan(scan_id) or {}
             scan_record.update(
@@ -350,7 +350,7 @@ class ScanController:
                 },
             )
 
-    def _record_detection(
+    async def _record_detection(
         self,
         scan_id: str,
         *,
@@ -376,17 +376,15 @@ class ScanController:
                 message=f"[{engine}] {signature} in {file_path}",
             )
         )
-        asyncio.create_task(
-            self._publish(
-                "threat_detected",
-                {
-                    "scan_id": scan_id,
-                    "engine": engine,
-                    "signature": signature,
-                    "file_path": file_path,
-                    "sha256": sha256,
-                },
-            )
+        await self._publish(
+            "threat_detected",
+            {
+                "scan_id": scan_id,
+                "engine": engine,
+                "signature": signature,
+                "file_path": file_path,
+                "sha256": sha256,
+            },
         )
 
     async def _await_threat_action(self) -> bool:
@@ -415,7 +413,7 @@ class ScanController:
                 continue
             return False
 
-    def _set_progress(
+    async def _set_progress(
         self,
         *,
         stage: ScanStage,
@@ -439,16 +437,14 @@ class ScanController:
                 self._progress.files_total,
             ),
         )
-        asyncio.create_task(self._publish_progress())
+        await self._publish_progress()
         if previous_stage != stage:
-            asyncio.create_task(
-                self._publish(
-                    "stage_changed",
-                    {
-                        "scan_id": self._progress.scan_id,
-                        "stage": stage.value,
-                    },
-                )
+            await self._publish(
+                "stage_changed",
+                {
+                    "scan_id": self._progress.scan_id,
+                    "stage": stage.value,
+                },
             )
 
     async def _publish_progress(self) -> None:

@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | **Document ID** | PLAN-PAV-001 |
-| **Version** | 0.3 |
+| **Version** | 0.4 |
 | **Date** | 2026-07-10 |
-| **Status** | In progress — Day 3 validated on Radxa; auto-mount deploy pending |
+| **Status** | In progress — Day 3 validated on Radxa; deploy install and systemd mount validated |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
-| **Source Design** | `LLD.md` v0.2 |
+| **Source Design** | `LLD.md` v0.4 |
 | **Target Hardware** | Radxa Zero 3W, 1 GB LPDDR4, 32 GB microSD, Waveshare Zero LCD HAT (A) |
 | **Target OS** | Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115 |
 | **Repository** | https://github.com/ranhaber/portable-antivirus.git |
@@ -34,7 +34,7 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 | Day 1 scaffolding | **Done** | Modular package layout, `/api/v1/status`, SQLite bootstrap |
 | Day 2 headless scan core | **Done** | Enumerator, ClamAV/YARA adapters, scan controller, reports, CLI |
 | Day 3 mount/API/events | **Mostly done** | Real USB mount, scan, WebSocket validated on Radxa |
-| P3 read-only mount flow | **Mostly done** | Manual mount validated; auto-mount deploy fix ready |
+| P3 read-only mount flow | **Mostly done** | Manual mount, removal wrapper, and systemd service validated; physical re-plug test pending |
 | P4 REST API and WebSocket | **Mostly done** | Real Quick Scan + live events on Radxa |
 | P5 display simulator | **Done (headless)** | `tools/display_simulator.py` validated against live engine |
 | P6 display HAT bring-up | **Blocked** | Waiting for HAT hardware (~3 days) |
@@ -51,7 +51,7 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 - WebSocket emitted `scan_started`, stage changes, `scan_progress`, `scan_completed`
 - Display simulator showed drive label and live scan progress
 
-**Known gap:** udev/systemd auto-mount failed with `203/EXEC` because the old unit hardcoded `/opt/portable-av/venv/`. Fixed in `deploy/` via env-file wrapper (`deploy/bin/portable-av-mount`, `deploy/install-dev.sh`); not yet installed on Radxa.
+**Resolved deploy issue:** udev/systemd auto-mount initially failed with `203/EXEC` because the old unit hardcoded `/opt/portable-av/venv/`. The fix is installed on Radxa via `deploy/install-dev.sh`; `portable-av-mount@sda1.service` now runs `/usr/local/bin/portable-av-mount`, mounts NTFS read-only, and notifies the engine. Physical unplug/re-plug validation remains.
 
 ---
 
@@ -94,7 +94,7 @@ If a gate fails, update `LLD.md` §19.1 and the affected configuration defaults 
 | P0 | Project Skeleton and Dev Tooling | Done | Python package, config, install layout |
 | P1 | Target OS and Board Foundation | Done | Radxa boots, SSH works, git clone, venv |
 | P2 | Headless Scan Core | Done | Scan controller, ClamAV/YARA, reports, history |
-| P3 | Read-Only Mount Flow | Mostly done | Manual mount validated; auto-mount deploy install pending |
+| P3 | Read-Only Mount Flow | Mostly done | Manual mount, removal wrapper, and systemd service validated |
 | P4 | REST API and WebSocket | Mostly done | Real Quick Scan and live events on Radxa |
 | P5 | Display Simulator | Done (headless) | Terminal client validated against live engine |
 | P6 | Display HAT Bring-Up | Blocked | Validated SPI/GPIO/power/pin map |
@@ -164,7 +164,10 @@ Tasks:
 - [x] Validate manual USB read-only mount on Radxa (NTFS via `ntfs-3g`)
 - [x] Validate WebSocket live events during a real scan on Radxa
 - [x] Validate simulator against running engine
-- [ ] Install updated deploy assets (`deploy/install-dev.sh`) and validate plug-in auto-mount
+- [x] Install updated deploy assets (`deploy/install-dev.sh`) on Radxa
+- [x] Validate `portable-av-mount@sda1.service` through systemd (`status=0/SUCCESS`)
+- [x] Validate removal wrapper updates API state to idle
+- [ ] Validate physical unplug/re-plug udev trigger
 
 Deliverables:
 
@@ -297,13 +300,11 @@ python tools/display_simulator.py
 
 ## 10. Immediate Next Actions
 
-1. Push deploy auto-mount fix to GitHub.
-2. On Radxa: `git pull`, `sudo sh deploy/install-dev.sh`.
-3. Unplug/re-plug USB and verify auto-mount + `GET /api/v1/drive` without manual mount command.
-4. Optional: EICAR threat-path validation (`threat_detected` WebSocket event).
-5. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
-6. Wire engine as systemd service for boot-time operation.
-7. Display HAT bring-up when hardware arrives (Day 4).
+1. Unplug/re-plug USB and verify udev auto-mount + `GET /api/v1/drive` without manual or `systemctl restart` command.
+2. Optional: EICAR threat-path validation (`threat_detected` WebSocket event).
+3. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
+4. Wire engine as systemd service for boot-time operation.
+5. Display HAT bring-up when hardware arrives (Day 4).
 
 ---
 
@@ -327,6 +328,7 @@ python tools/display_simulator.py
 | 0.1 | 2026-07-09 | Initial implementation plan from SRS v1.1, HLD v1.1, and LLD v0.2 |
 | 0.2 | 2026-07-10 | Marked Day 1–2 done, Radxa git validation, Day 3 scope and progress, deploy workflow |
 | 0.3 | 2026-07-10 | Day 3 Radxa validation: real NTFS mount, Quick Scan, WebSocket, simulator; deploy wrapper fix |
+| 0.4 | 2026-07-10 | Installed deploy fix on Radxa; validated systemd mount service and removal wrapper |
 
 ---
 

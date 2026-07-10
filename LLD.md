@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.3 |
-| **Date** | 2026-07-09 |
+| **Version** | 0.4 |
+| **Date** | 2026-07-10 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
@@ -1029,7 +1029,9 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | Internal drive callback | `POST /api/v1/internal/drive` → engine state + WebSocket `drive_mounted` |
 | Quick Scan on real media | 3 files, 67,930,968 bytes, 0 threats |
 | WebSocket stages | `enumerating` → `clamav` → `hashing` → `yara` → `reporting` → `scan_completed` |
-| Auto-mount via udev | Failed with `203/EXEC` (hardcoded `/opt/portable-av/venv/`); fixed by env-file wrapper in `deploy/` |
+| Auto-mount deploy | `203/EXEC` fixed by env-file wrapper; `portable-av-mount@sda1.service` validated with `status=0/SUCCESS` |
+| Removal wrapper | `/usr/local/bin/portable-av-mount --unmount --device /dev/sda1` updates API state to idle |
+| Remaining validation | Physical unplug/re-plug udev trigger |
 
 **OS dependency:** add `ntfs-3g` to Radxa package list for NTFS USB drives. FAT32/exFAT/ext4 paths use standard `mount`.
 
@@ -1058,6 +1060,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | 0.1 | 2026-07-09 | - | Initial LLD draft from SRS v1.1 and HLD v1.1 |
 | 0.2 | 2026-07-09 | - | Added §19.1 design decisions pending sign-off |
 | 0.3 | 2026-07-10 | - | Added §19.2 Radxa headless validation notes (mount, scan, WebSocket) |
+| 0.4 | 2026-07-10 | - | Updated §19.2 with deploy install, systemd mount, and removal-wrapper validation |
 
 ---
 

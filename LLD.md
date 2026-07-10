@@ -1033,6 +1033,8 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | Removal wrapper | `/usr/local/bin/portable-av-mount --unmount --device /dev/sda1` updates API state to idle |
 | Synthetic udev trigger | `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1` starts the mount service |
 | Physical unplug/re-plug | Drive re-enumerated as `/dev/sdb1` and auto-mounted read-only with no manual command |
+| EICAR threat path | `Eicar-Test-Signature` detected; API reached `threat_prompt`; `POST /scan/threat-action` stop → `complete` with `threats=1` |
+| ClamAV on 1 GB RAM | `clamscan` detects EICAR but loads ~600 MB; can OOM-kill when memory is tight; prefer `clamd` once installed |
 
 **udev device node:** the rule matches `sd[a-z][0-9]`, so re-plugged drives that re-enumerate under a different node (e.g. `sda1` → `sdb1`) still auto-mount correctly.
 

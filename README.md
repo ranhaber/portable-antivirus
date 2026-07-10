@@ -12,8 +12,9 @@ Headless prototype validated on Radxa Zero 3W (2026-07-10):
 - Quick Scan completed through ClamAV/YARA pipeline (3 files, 0 threats)
 - WebSocket events and display simulator working against live engine
 - USB auto-mount validated end-to-end: physical unplug/re-plug re-enumerated as `/dev/sdb1` and auto-mounted read-only via udev/systemd
+- EICAR threat-path validated: `Eicar-Test-Signature` → `threat_prompt` → stop → `threats=1`
 
-Remaining before v1 prototype: optional EICAR threat-path test, engine systemd service for boot-time operation, display HAT integration.
+Remaining before v1 prototype: engine systemd service for boot-time operation, ClamAV daemon tuning for 1 GB RAM, display HAT integration.
 
 ## Target Platform
 

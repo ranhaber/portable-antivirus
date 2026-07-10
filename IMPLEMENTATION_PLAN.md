@@ -145,7 +145,7 @@ Exit checks:
 - [x] Mocked/API scan path records history
 - [x] Cancel path implemented
 - [x] Live Quick Scan on Radxa with real ClamAV (3 files, 0 threats, 2026-07-10)
-- [ ] Live EICAR detection on Radxa (optional threat-path validation)
+- [x] Live EICAR detection on Radxa (Eicar-Test-Signature via full scan + scan_root override, 2026-07-10)
 
 ### Day 3: Mount, API, Events, and Simulator — **MOSTLY DONE**
 
@@ -184,7 +184,7 @@ Exit checks:
 - [x] `DELETE /api/v1/scan` cancels scan (implemented)
 - [x] WebSocket receives `drive_mounted` (unit tested)
 - [x] WebSocket receives `scan_started`, `scan_progress`, `scan_completed` on Radxa
-- [ ] WebSocket receives `threat_detected` on Radxa (EICAR or test fixture)
+- [x] WebSocket receives `threat_detected` on Radxa (EICAR via `tools/run_eicar_test.sh`)
 - [ ] TXT/HTML reports downloadable through API
 
 ---
@@ -301,10 +301,9 @@ python tools/display_simulator.py
 
 ## 10. Immediate Next Actions
 
-1. Optional: EICAR threat-path validation (`threat_detected` WebSocket event).
-2. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
-3. Wire engine as systemd service for boot-time operation.
-4. Display HAT bring-up when hardware arrives (Day 4).
+1. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004) — initial finding: `clamscan` works but loads ~600 MB and can OOM on 1 GB board when memory is tight; `clamd`/`clamdscan` not installed.
+2. Wire engine as systemd service for boot-time operation.
+3. Display HAT bring-up when hardware arrives (Day 4).
 
 ---
 

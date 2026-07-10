@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.6 |
+| **Version** | 0.7 |
 | **Date** | 2026-07-10 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
@@ -998,7 +998,7 @@ Implement:
 | ID | Item | Owner / Resolution Point |
 |---|---|---|
 | LLD-OPEN-001 | Final validated display pin map | Milestone 1 |
-| LLD-OPEN-002 | Final ClamAV mode: `clamd` or `clamscan` | Milestone 3 benchmark |
+| LLD-OPEN-002 | ~~Final ClamAV mode~~ **RESOLVED: `clamd` + `clamdscan --fdpass`** | Benchmarked 2026-07-10 |
 | LLD-OPEN-003 | Whether external 3.3V regulator is required | Milestone 1 power validation |
 | LLD-OPEN-004 | Exact Python GPIO library on vendor kernel | Milestone 1 |
 | LLD-OPEN-005 | Whether progress pre-count is worth the extra enumeration pass | Milestone 3 |
@@ -1012,7 +1012,7 @@ The LLD is implementable as written. The items below are **defaults or placehold
 | Display pin map and SPI assignment | Provisional mapping in HLD §5.5.3; `display.devices[]` empty in config | Milestone 1 bring-up on Radxa + HAT | Display service (Milestone 2) |
 | Python SPI/GPIO library | `spidev` + Radxa-compatible GPIO (library TBD) | Milestone 1 driver spike on vendor kernel 6.1.115 | `LcdHatDriver`, `buttons.py` |
 | HAT 3.3V power | Board 3.3V rail assumed sufficient | Milestone 1 current/voltage check under full backlight | Enclosure/power BOM only |
-| ClamAV execution mode | `clamav_mode: "clamd"` with `clamscan` fallback | Milestone 3 RAM/CPU benchmark on 1 GB target | Final `clamd.conf` tuning and service enablement |
+| ~~ClamAV execution mode~~ **RESOLVED** | `clamav_mode: "clamd"` via `clamdscan --fdpass`; daemon tuned by `tools/setup_clamd.sh` | Benchmarked on Radxa 2026-07-10 | — |
 | Scan progress total count | Stream enumeration; optional pre-count not specified | Milestone 3 UX vs memory trade-off on real media | Accurate `files_total` / percent on first file only |
 | Threat meter segment count | 12 segments (HLD §12.4) | Milestone 2 visual review on 240×240 | Cosmetic only |
 
@@ -1034,7 +1034,8 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | Synthetic udev trigger | `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1` starts the mount service |
 | Physical unplug/re-plug | Drive re-enumerated as `/dev/sdb1` and auto-mounted read-only with no manual command |
 | EICAR threat path | `Eicar-Test-Signature` detected; API reached `threat_prompt`; `POST /scan/threat-action` stop → `complete` with `threats=1` |
-| ClamAV on 1 GB RAM | `clamscan` detects EICAR but loads ~600 MB; can OOM-kill when memory is tight; prefer `clamd` once installed |
+| ClamAV mode (GATE-004) | Resolved to `clamd` + `clamdscan --fdpass`: warm scan ~0.3 s vs `clamscan` ~94 s; API reaches threat in <2 s |
+| ClamAV memory on 1 GB | `clamd` holds ~566–606 MB resident; with the API running the board swaps heavily (~446–481 MiB). Tuned via `tools/setup_clamd.sh` (`MaxThreads 2`, `ConcurrentDatabaseReload no`, `ExitOnOOM true`) |
 
 **udev device node:** the rule matches `sd[a-z][0-9]`, so re-plugged drives that re-enumerate under a different node (e.g. `sda1` → `sdb1`) still auto-mount correctly.
 
@@ -1068,6 +1069,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | 0.4 | 2026-07-10 | - | Updated §19.2 with deploy install, systemd mount, and removal-wrapper validation |
 | 0.5 | 2026-07-10 | - | Added synthetic udev trigger validation |
 | 0.6 | 2026-07-10 | - | Physical unplug/re-plug auto-mount validated (`/dev/sdb1`) |
+| 0.7 | 2026-07-10 | - | EICAR threat path validated; GATE-004 resolved to `clamd` + `clamdscan --fdpass` with memory findings |
 
 ---
 

@@ -13,10 +13,11 @@ Project context for AI agents working on this repository.
 ## Radxa OS Packages (headless dev)
 
 ```bash
-sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon ntfs-3g
+sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon clamdscan ntfs-3g
 ```
 
 `ntfs-3g` is required for NTFS USB drives (validated 2026-07-10).
+`clamdscan` is the daemon client the engine uses in `clamd` mode (GATE-004). Configure the daemon with `sudo sh tools/setup_clamd.sh` (tuned for 1 GB RAM).
 
 ## Dev Board SSH Access
 

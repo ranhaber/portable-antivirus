@@ -14,7 +14,9 @@ Headless prototype validated on Radxa Zero 3W (2026-07-10):
 - USB auto-mount validated end-to-end: physical unplug/re-plug re-enumerated as `/dev/sdb1` and auto-mounted read-only via udev/systemd
 - EICAR threat-path validated: `Eicar-Test-Signature` → `threat_prompt` → stop → `threats=1`
 
-Remaining before v1 prototype: engine systemd service for boot-time operation, ClamAV daemon tuning for 1 GB RAM, display HAT integration.
+- ClamAV mode resolved to `clamd` + `clamdscan --fdpass`: warm scans ~0.3 s vs ~94 s for `clamscan` (see `tools/setup_clamd.sh` / `tools/benchmark_clamav.sh`)
+
+Remaining before v1 prototype: engine systemd service for boot-time operation, ClamAV signature-set trimming to ease 1 GB RAM pressure, display HAT integration.
 
 ## Target Platform
 
@@ -91,7 +93,7 @@ python -m portable_av.api.app
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon ntfs-3g
+sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon clamdscan ntfs-3g
 git clone https://github.com/ranhaber/portable-antivirus.git
 cd portable-antivirus
 python3 -m venv .venv
@@ -99,6 +101,13 @@ source .venv/bin/activate
 pip install -r requirements-dev.txt
 pytest
 PORTABLE_AV_CONFIG=config/dev.config.json python -m portable_av.api.app
+```
+
+ClamAV daemon (recommended engine mode, tuned for 1 GB RAM):
+
+```bash
+sudo sh tools/setup_clamd.sh          # installs clamdscan, tunes + starts clamd
+sh tools/benchmark_clamav.sh          # optional: clamscan vs clamdscan comparison
 ```
 
 USB auto-mount (development checkout):

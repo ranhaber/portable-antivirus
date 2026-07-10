@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | **Document ID** | PLAN-PAV-001 |
-| **Version** | 0.6 |
+| **Version** | 0.7 |
 | **Date** | 2026-07-10 |
-| **Status** | Day 3 complete — full USB auto-mount chain validated on Radxa hardware |
+| **Status** | Day 3 complete — USB auto-mount + EICAR validated; GATE-004 resolved (clamd) |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
-| **Source Design** | `LLD.md` v0.6 |
+| **Source Design** | `LLD.md` v0.7 |
 | **Target Hardware** | Radxa Zero 3W, 1 GB LPDDR4, 32 GB microSD, Waveshare Zero LCD HAT (A) |
 | **Target OS** | Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115 |
 | **Repository** | https://github.com/ranhaber/portable-antivirus.git |
@@ -65,7 +65,7 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 - All removable media is mounted read-only.
 - Source media is never quarantined, deleted, or modified.
 - Display-specific work can use a simulator until the HAT arrives.
-- `clamd` is the default design target, with `clamscan` fallback preserved until Radxa benchmarks are complete.
+- `clamd` + `clamdscan --fdpass` is the confirmed engine mode (GATE-004 resolved); `clamscan` is a fallback only when the daemon is unavailable.
 - Radxa pulls code from GitHub public repo, same workflow as other Radxa projects.
 
 ---
@@ -79,7 +79,7 @@ No open decision blocks Day 3 work. The items below are planned validation gates
 | GATE-001 | Display pin map and SPI assignment | Provisional HLD mapping | Display HAT bring-up |
 | GATE-002 | Python SPI/GPIO library | `spidev` plus Radxa-compatible GPIO library TBD | Display HAT bring-up |
 | GATE-003 | HAT 3.3V power sufficiency | Board 3.3V rail assumed sufficient | Display HAT power test |
-| GATE-004 | ClamAV mode | `clamd` preferred, `clamscan` fallback | Headless scan benchmark on Radxa |
+| GATE-004 | ClamAV mode | **RESOLVED (2026-07-10): `clamd` + `clamdscan --fdpass`** | Benchmarked on Radxa |
 | GATE-005 | Progress percentage strategy | Streaming enumeration; optional pre-count | Real-media scan UX benchmark |
 | GATE-006 | Threat meter segment count | 12 segments | Display visual review |
 
@@ -301,9 +301,23 @@ python tools/display_simulator.py
 
 ## 10. Immediate Next Actions
 
-1. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004) — initial finding: `clamscan` works but loads ~600 MB and can OOM on 1 GB board when memory is tight; `clamd`/`clamdscan` not installed.
-2. Wire engine as systemd service for boot-time operation.
+1. Wire engine as systemd service for boot-time operation, ordered `After=clamav-daemon.service`.
+2. Trim ClamAV signature footprint to ease memory pressure on the 1 GB board (see GATE-004 findings below).
 3. Display HAT bring-up when hardware arrives (Day 4).
+
+### GATE-004 findings (2026-07-10)
+
+Benchmarked on the Radxa (963 MiB RAM) with the full official signature set (~108 MB on disk):
+
+| Path | Wall time (EICAR) | Notes |
+|---|---|---|
+| `clamscan` (cold) | ~94 s | Reloads the whole DB **per invocation** — our adapter scans per file, so this is unusable for real scans |
+| `clamdscan --fdpass` (cold, DB swapped out) | ~82 s | Daemon pages faulted back from swap under memory pressure |
+| `clamdscan --fdpass` (warm) | ~0.3 s | Steady-state daemon path — ~285× faster than `clamscan` |
+| API full scan via `clamd` | threat in <2 s | vs ~54 s through the old `clamscan` path |
+
+- **Resolution:** engine uses `clamav_mode: "clamd"` with `clamdscan --fdpass`. `clamdscan` installed; `clamav-daemon` enabled and tuned (`tools/setup_clamd.sh`: `MaxThreads 2`, `ConcurrentDatabaseReload no`, `ExitOnOOM true`).
+- **Memory caveat:** `clamd` holds ~566–606 MB resident. With the Python API also running, the board sits at ~870–920 MiB used and swaps heavily (446–481 MiB swap). It works but first-scan latency degrades when the daemon is swapped out. Keep `clamd` resident (never run `clamscan` concurrently) and consider trimming the DB.
 
 ---
 
@@ -330,6 +344,7 @@ python tools/display_simulator.py
 | 0.4 | 2026-07-10 | Installed deploy fix on Radxa; validated systemd mount service and removal wrapper |
 | 0.5 | 2026-07-10 | Validated synthetic udev trigger starts the mount service |
 | 0.6 | 2026-07-10 | Day 3 complete: physical USB unplug/re-plug auto-mount validated (`/dev/sdb1`) |
+| 0.7 | 2026-07-10 | EICAR threat path validated; GATE-004 resolved to `clamd` + `clamdscan --fdpass`; clamd setup/benchmark tooling added |
 
 ---
 

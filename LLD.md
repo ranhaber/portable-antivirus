@@ -5,7 +5,7 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.5 |
+| **Version** | 0.6 |
 | **Date** | 2026-07-10 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
@@ -1032,7 +1032,9 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | Auto-mount deploy | `203/EXEC` fixed by env-file wrapper; `portable-av-mount@sda1.service` validated with `status=0/SUCCESS` |
 | Removal wrapper | `/usr/local/bin/portable-av-mount --unmount --device /dev/sda1` updates API state to idle |
 | Synthetic udev trigger | `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1` starts the mount service |
-| Remaining validation | Physical unplug/re-plug udev trigger |
+| Physical unplug/re-plug | Drive re-enumerated as `/dev/sdb1` and auto-mounted read-only with no manual command |
+
+**udev device node:** the rule matches `sd[a-z][0-9]`, so re-plugged drives that re-enumerate under a different node (e.g. `sda1` → `sdb1`) still auto-mount correctly.
 
 **OS dependency:** add `ntfs-3g` to Radxa package list for NTFS USB drives. FAT32/exFAT/ext4 paths use standard `mount`.
 
@@ -1063,6 +1065,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | 0.3 | 2026-07-10 | - | Added §19.2 Radxa headless validation notes (mount, scan, WebSocket) |
 | 0.4 | 2026-07-10 | - | Updated §19.2 with deploy install, systemd mount, and removal-wrapper validation |
 | 0.5 | 2026-07-10 | - | Added synthetic udev trigger validation |
+| 0.6 | 2026-07-10 | - | Physical unplug/re-plug auto-mount validated (`/dev/sdb1`) |
 
 ---
 

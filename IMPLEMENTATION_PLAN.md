@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | **Document ID** | PLAN-PAV-001 |
-| **Version** | 0.5 |
+| **Version** | 0.6 |
 | **Date** | 2026-07-10 |
-| **Status** | In progress — Day 3 validated on Radxa; deploy install, systemd mount, and synthetic udev trigger validated |
+| **Status** | Day 3 complete — full USB auto-mount chain validated on Radxa hardware |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
-| **Source Design** | `LLD.md` v0.5 |
+| **Source Design** | `LLD.md` v0.6 |
 | **Target Hardware** | Radxa Zero 3W, 1 GB LPDDR4, 32 GB microSD, Waveshare Zero LCD HAT (A) |
 | **Target OS** | Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115 |
 | **Repository** | https://github.com/ranhaber/portable-antivirus.git |
@@ -33,8 +33,8 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 | P1 Radxa OS foundation | **Done** | Radxa clones repo, venv, `pytest` 7/7 pass, API starts |
 | Day 1 scaffolding | **Done** | Modular package layout, `/api/v1/status`, SQLite bootstrap |
 | Day 2 headless scan core | **Done** | Enumerator, ClamAV/YARA adapters, scan controller, reports, CLI |
-| Day 3 mount/API/events | **Mostly done** | Real USB mount, scan, WebSocket validated on Radxa |
-| P3 read-only mount flow | **Mostly done** | Manual mount, removal wrapper, systemd service, and synthetic udev trigger validated; physical re-plug test pending |
+| Day 3 mount/API/events | **Done** | Physical USB auto-mount, scan, WebSocket validated on Radxa |
+| P3 read-only mount flow | **Done** | Physical unplug/re-plug auto-mount validated (`/dev/sdb1`) |
 | P4 REST API and WebSocket | **Mostly done** | Real Quick Scan + live events on Radxa |
 | P5 display simulator | **Done (headless)** | `tools/display_simulator.py` validated against live engine |
 | P6 display HAT bring-up | **Blocked** | Waiting for HAT hardware (~3 days) |
@@ -51,7 +51,7 @@ The display HAT is expected in approximately 3 days. Until then, implementation 
 - WebSocket emitted `scan_started`, stage changes, `scan_progress`, `scan_completed`
 - Display simulator showed drive label and live scan progress
 
-**Resolved deploy issue:** udev/systemd auto-mount initially failed with `203/EXEC` because the old unit hardcoded `/opt/portable-av/venv/`. The fix is installed on Radxa via `deploy/install-dev.sh`; `portable-av-mount@sda1.service` now runs `/usr/local/bin/portable-av-mount`, mounts NTFS read-only, and notifies the engine. A synthetic `udevadm trigger` starts the service successfully. Physical unplug/re-plug validation remains.
+**Resolved deploy issue:** udev/systemd auto-mount initially failed with `203/EXEC` because the old unit hardcoded `/opt/portable-av/venv/`. The fix is installed on Radxa via `deploy/install-dev.sh`; the templated `portable-av-mount@.service` now runs `/usr/local/bin/portable-av-mount`, mounts NTFS read-only, and notifies the engine. **Physical unplug/re-plug validated:** the drive re-enumerated as `/dev/sdb1` and auto-mounted read-only with no manual command; the widened udev rule (`sd[a-z][0-9]`) handled the new device node.
 
 ---
 
@@ -94,7 +94,7 @@ If a gate fails, update `LLD.md` §19.1 and the affected configuration defaults 
 | P0 | Project Skeleton and Dev Tooling | Done | Python package, config, install layout |
 | P1 | Target OS and Board Foundation | Done | Radxa boots, SSH works, git clone, venv |
 | P2 | Headless Scan Core | Done | Scan controller, ClamAV/YARA, reports, history |
-| P3 | Read-Only Mount Flow | Mostly done | Manual mount, removal wrapper, systemd service, and synthetic udev trigger validated |
+| P3 | Read-Only Mount Flow | Done | Physical unplug/re-plug auto-mount validated on Radxa |
 | P4 | REST API and WebSocket | Mostly done | Real Quick Scan and live events on Radxa |
 | P5 | Display Simulator | Done (headless) | Terminal client validated against live engine |
 | P6 | Display HAT Bring-Up | Blocked | Validated SPI/GPIO/power/pin map |
@@ -168,7 +168,7 @@ Tasks:
 - [x] Validate `portable-av-mount@sda1.service` through systemd (`status=0/SUCCESS`)
 - [x] Validate removal wrapper updates API state to idle
 - [x] Validate synthetic `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1`
-- [ ] Validate physical unplug/re-plug udev trigger
+- [x] Validate physical unplug/re-plug udev trigger (re-enumerated as `/dev/sdb1`, auto-mounted read-only)
 
 Deliverables:
 
@@ -179,7 +179,7 @@ Deliverables:
 
 Exit checks:
 
-- [x] `mount` shows `ro,nosuid,nodev,noexec` for external media (manual mount validated)
+- [x] `mount` shows `ro,nosuid,nodev,noexec` for external media (physical auto-mount validated)
 - [x] `POST /api/v1/scan` starts a scan (unit tested)
 - [x] `DELETE /api/v1/scan` cancels scan (implemented)
 - [x] WebSocket receives `drive_mounted` (unit tested)
@@ -301,11 +301,10 @@ python tools/display_simulator.py
 
 ## 10. Immediate Next Actions
 
-1. Unplug/re-plug USB and verify udev auto-mount + `GET /api/v1/drive` without manual or `systemctl restart` command.
-2. Optional: EICAR threat-path validation (`threat_detected` WebSocket event).
-3. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
-4. Wire engine as systemd service for boot-time operation.
-5. Display HAT bring-up when hardware arrives (Day 4).
+1. Optional: EICAR threat-path validation (`threat_detected` WebSocket event).
+2. Benchmark `clamd` vs `clamscan` on Radxa (GATE-004).
+3. Wire engine as systemd service for boot-time operation.
+4. Display HAT bring-up when hardware arrives (Day 4).
 
 ---
 
@@ -331,6 +330,7 @@ python tools/display_simulator.py
 | 0.3 | 2026-07-10 | Day 3 Radxa validation: real NTFS mount, Quick Scan, WebSocket, simulator; deploy wrapper fix |
 | 0.4 | 2026-07-10 | Installed deploy fix on Radxa; validated systemd mount service and removal wrapper |
 | 0.5 | 2026-07-10 | Validated synthetic udev trigger starts the mount service |
+| 0.6 | 2026-07-10 | Day 3 complete: physical USB unplug/re-plug auto-mount validated (`/dev/sdb1`) |
 
 ---
 

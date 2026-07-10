@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Response, status
 
 from portable_av.api.auth import require_write_auth
@@ -35,7 +37,12 @@ async def start_scan(
     state: AppState = Depends(get_app_state),
     _: None = Depends(require_write_auth),
 ) -> StartScanResponse:
-    scan_id = await state.scan_controller.start_scan(body.mode, requested_by="api")
+    scan_root = Path(body.scan_root) if body.scan_root else None
+    scan_id = await state.scan_controller.start_scan(
+        body.mode,
+        requested_by="api",
+        scan_root=scan_root,
+    )
     return StartScanResponse(scan_id=scan_id, state=ScanState.SCANNING)
 
 

@@ -95,3 +95,46 @@ def test_scan_fixture_directory(mock_scan, client: TestClient, app_bundle, tmp_p
     record = app_bundle.state.app_state.history_repository.get_scan(scan_id)
     assert record is not None
     assert record["files_scanned"] == 1
+
+
+@patch("portable_av.engine.scan_controller.ClamAvAdapter.scan_file", new_callable=AsyncMock)
+def test_scan_scan_root_override(mock_scan, client: TestClient, app_bundle, tmp_path: Path) -> None:
+    mock_scan.return_value = EngineResult(
+        engine="clamav",
+        clean=True,
+        signature=None,
+        raw_output="OK",
+    )
+    fixture = tmp_path / "override"
+    fixture.mkdir()
+    (fixture / "sample.exe").write_bytes(b"MZ")
+
+    drive = DriveInfo(
+        device="/dev/sda1",
+        mount_path=tmp_path / "usb",
+        label="TEST",
+        uuid="TEST-UUID",
+        filesystem="vfat",
+        size_bytes=1024,
+        readonly=True,
+    )
+    asyncio.run(app_bundle.state.app_state.scan_controller.set_drive(drive))
+
+    response = client.post(
+        "/api/v1/scan",
+        json={"mode": "quick", "scan_root": str(fixture)},
+        headers={"Authorization": "Bearer dev-token"},
+    )
+    assert response.status_code == 200
+    scan_id = response.json()["scan_id"]
+
+    deadline = time.time() + 5
+    while time.time() < deadline:
+        progress = client.get("/api/v1/scan/progress").json()
+        if progress["state"] == "complete":
+            break
+        time.sleep(0.1)
+
+    record = app_bundle.state.app_state.history_repository.get_scan(scan_id)
+    assert record is not None
+    assert record["files_scanned"] == 1

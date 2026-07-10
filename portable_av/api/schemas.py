@@ -23,6 +23,7 @@ class StatusResponse(BaseModel):
 
 class StartScanRequest(BaseModel):
     mode: ScanMode
+    scan_root: str | None = None
 
 
 class StartScanResponse(BaseModel):

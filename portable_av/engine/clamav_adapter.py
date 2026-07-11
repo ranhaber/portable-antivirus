@@ -58,16 +58,14 @@ class ClamAvAdapter:
 
     def _build_command(self, path: Path) -> list[str] | None:
         if self._mode == "clamd":
-            executable = which("clamdscan") or which("clamscan")
+            executable = which("clamdscan")
             if executable is None:
                 return None
-            if Path(executable).name == "clamdscan":
-                # --fdpass hands the open descriptor to the daemon so it can
-                # scan files the clamav user could not otherwise read (e.g.
-                # user-owned paths). The daemon keeps the DB resident, so this
-                # avoids reloading ~600 MB of signatures per file.
-                return [executable, "--no-summary", "--fdpass", str(path)]
-            return [executable, "--no-summary", str(path)]
+            # --fdpass hands the open descriptor to the daemon so it can scan
+            # files the clamav user could not otherwise read (e.g. user-owned
+            # paths). The daemon keeps the DB resident, so this avoids reloading
+            # ~600 MB of signatures per file.
+            return [executable, "--no-summary", "--fdpass", str(path)]
         executable = which("clamscan")
         if executable is None:
             return None

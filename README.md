@@ -14,9 +14,9 @@ Headless prototype validated on Radxa Zero 3W (2026-07-10):
 - USB auto-mount validated end-to-end: physical unplug/re-plug re-enumerated as `/dev/sdb1` and auto-mounted read-only via udev/systemd
 - EICAR threat-path validated: `Eicar-Test-Signature` → `threat_prompt` → stop → `threats=1`
 
-- ClamAV mode resolved to `clamd` + `clamdscan --fdpass`: warm scans ~0.3 s vs ~94 s for `clamscan` (see `tools/setup_clamd.sh` / `tools/benchmark_clamav.sh`)
+- ClamAV mode resolved to strict `clamd` + `clamdscan --fdpass`: warm scans ~0.3 s vs ~94 s for `clamscan`; no automatic `clamscan` fallback on the 1 GB board
 
-Remaining before v1 prototype: engine systemd service for boot-time operation, ClamAV signature-set trimming to ease 1 GB RAM pressure, display HAT integration.
+Remaining before v1 prototype: engine systemd service for boot-time operation, large-file/archive limit benchmarking, display HAT integration.
 
 ## Target Platform
 
@@ -109,6 +109,8 @@ ClamAV daemon (recommended engine mode, tuned for 1 GB RAM):
 sudo sh tools/setup_clamd.sh          # installs clamdscan, tunes + starts clamd
 sh tools/benchmark_clamav.sh          # optional: clamscan vs clamdscan comparison
 ```
+
+The prototype keeps the full official ClamAV DB by default (`main.cvd`, `daily.cvd`, `bytecode.cvd`). In `clamd` mode, `clamdscan` is required; the engine does not automatically fall back to `clamscan` because that can duplicate DB memory and OOM the 1 GB board.
 
 USB auto-mount (development checkout):
 

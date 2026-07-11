@@ -5,8 +5,8 @@
 | Field | Value |
 |---|---|
 | **Document ID** | LLD-PAV-001 |
-| **Version** | 0.7 |
-| **Date** | 2026-07-10 |
+| **Version** | 0.8 |
+| **Date** | 2026-07-11 |
 | **Status** | Initial detailed design draft |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
@@ -1034,8 +1034,9 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | Synthetic udev trigger | `udevadm trigger --action=add --subsystem-match=block --sysname-match=sda1` starts the mount service |
 | Physical unplug/re-plug | Drive re-enumerated as `/dev/sdb1` and auto-mounted read-only with no manual command |
 | EICAR threat path | `Eicar-Test-Signature` detected; API reached `threat_prompt`; `POST /scan/threat-action` stop → `complete` with `threats=1` |
-| ClamAV mode (GATE-004) | Resolved to `clamd` + `clamdscan --fdpass`: warm scan ~0.3 s vs `clamscan` ~94 s; API reaches threat in <2 s |
+| ClamAV mode (GATE-004) | Resolved to strict `clamd` + `clamdscan --fdpass`: warm scan ~0.3 s vs `clamscan` ~94 s; API reaches threat in <2 s |
 | ClamAV memory on 1 GB | `clamd` holds ~566–606 MB resident; with the API running the board swaps heavily (~446–481 MiB). Tuned via `tools/setup_clamd.sh` (`MaxThreads 2`, `ConcurrentDatabaseReload no`, `ExitOnOOM true`) |
+| ClamAV fallback policy | Full official DB remains default; no automatic `clamscan` fallback in `clamd` mode because it can duplicate DB memory and OOM the board |
 
 **udev device node:** the rule matches `sd[a-z][0-9]`, so re-plugged drives that re-enumerate under a different node (e.g. `sda1` → `sdb1`) still auto-mount correctly.
 
@@ -1070,6 +1071,7 @@ Headless Milestone 3 validation on Radxa Zero 3W:
 | 0.5 | 2026-07-10 | - | Added synthetic udev trigger validation |
 | 0.6 | 2026-07-10 | - | Physical unplug/re-plug auto-mount validated (`/dev/sdb1`) |
 | 0.7 | 2026-07-10 | - | EICAR threat path validated; GATE-004 resolved to `clamd` + `clamdscan --fdpass` with memory findings |
+| 0.8 | 2026-07-11 | - | Strict `clamdscan` policy documented; no automatic `clamscan` fallback; full DB remains default |
 
 ---
 

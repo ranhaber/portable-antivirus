@@ -17,7 +17,7 @@ sudo apt install -y python3 python3-venv python3-pip clamav clamav-daemon clamds
 ```
 
 `ntfs-3g` is required for NTFS USB drives (validated 2026-07-10).
-`clamdscan` is the daemon client the engine uses in `clamd` mode (GATE-004). Configure the daemon with `sudo sh tools/setup_clamd.sh` (tuned for 1 GB RAM).
+`clamdscan` is the daemon client the engine uses in strict `clamd` mode (GATE-004). Configure the daemon with `sudo sh tools/setup_clamd.sh` (tuned for 1 GB RAM). Do not add automatic `clamscan` fallback on the Radxa; it can duplicate ClamAV DB memory and OOM the 1 GB board.
 
 ## Dev Board SSH Access
 

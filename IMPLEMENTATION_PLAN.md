@@ -5,12 +5,12 @@
 | Field | Value |
 |---|---|
 | **Document ID** | PLAN-PAV-001 |
-| **Version** | 0.7 |
-| **Date** | 2026-07-10 |
-| **Status** | Day 3 complete — USB auto-mount + EICAR validated; GATE-004 resolved (clamd) |
+| **Version** | 0.8 |
+| **Date** | 2026-07-11 |
+| **Status** | Day 3 complete — USB auto-mount + EICAR validated; GATE-004 resolved (strict clamd) |
 | **Source Requirements** | `SRS.md` v1.1 |
 | **Source Architecture** | `HLD.md` v1.1 |
-| **Source Design** | `LLD.md` v0.7 |
+| **Source Design** | `LLD.md` v0.8 |
 | **Target Hardware** | Radxa Zero 3W, 1 GB LPDDR4, 32 GB microSD, Waveshare Zero LCD HAT (A) |
 | **Target OS** | Armbian Ubuntu 24.04 Noble Minimal (CLI), vendor kernel 6.1.115 |
 | **Repository** | https://github.com/ranhaber/portable-antivirus.git |
@@ -302,8 +302,9 @@ python tools/display_simulator.py
 ## 10. Immediate Next Actions
 
 1. Wire engine as systemd service for boot-time operation, ordered `After=clamav-daemon.service`.
-2. Trim ClamAV signature footprint to ease memory pressure on the 1 GB board (see GATE-004 findings below).
-3. Display HAT bring-up when hardware arrives (Day 4).
+2. Define and benchmark large-file/archive scan limits against expected real media.
+3. Only if memory remains unacceptable after real-media benchmarks, measure reduced ClamAV database modes; keep full official DB as the default.
+4. Display HAT bring-up when hardware arrives (Day 4).
 
 ### GATE-004 findings (2026-07-10)
 
@@ -317,7 +318,8 @@ Benchmarked on the Radxa (963 MiB RAM) with the full official signature set (~10
 | API full scan via `clamd` | threat in <2 s | vs ~54 s through the old `clamscan` path |
 
 - **Resolution:** engine uses `clamav_mode: "clamd"` with `clamdscan --fdpass`. `clamdscan` installed; `clamav-daemon` enabled and tuned (`tools/setup_clamd.sh`: `MaxThreads 2`, `ConcurrentDatabaseReload no`, `ExitOnOOM true`).
-- **Memory caveat:** `clamd` holds ~566–606 MB resident. With the Python API also running, the board sits at ~870–920 MiB used and swaps heavily (446–481 MiB swap). It works but first-scan latency degrades when the daemon is swapped out. Keep `clamd` resident (never run `clamscan` concurrently) and consider trimming the DB.
+- **Policy:** full official DB (`main.cvd`, `daily.cvd`, `bytecode.cvd`) remains the default. In `clamd` mode, `clamdscan` is required; the engine must not automatically fall back to `clamscan` on the 1 GB board.
+- **Memory caveat:** `clamd` holds ~566–606 MB resident. With the Python API also running, the board sits at ~870–920 MiB used and swaps heavily (446–481 MiB swap). It works but first-scan latency degrades when the daemon is swapped out. Keep `clamd` resident and avoid any concurrent `clamscan`.
 
 ---
 
@@ -325,7 +327,7 @@ Benchmarked on the Radxa (963 MiB RAM) with the full official signature set (~10
 
 | Risk | Watch For | Response |
 |---|---|---|
-| 1 GB RAM too tight for `clamd` | OOM, swap pressure, slow scans | Switch default to `clamscan`, reduce archive/file limits |
+| 1 GB RAM too tight for `clamd` | OOM, swap pressure, slow first scan | Keep strict `clamdscan` path, tune large-file/archive limits, only benchmark reduced DB modes if needed |
 | microSD write pressure | Frequent progress commits, large logs | Throttle DB writes, use log rotation, avoid clean-file metadata |
 | udev complexity | Duplicate events, partitions vs whole disk confusion | Debounce by UUID/device path, only mount supported partitions |
 | Display delay | Real UI blocked | Continue simulator-driven integration |
@@ -345,6 +347,7 @@ Benchmarked on the Radxa (963 MiB RAM) with the full official signature set (~10
 | 0.5 | 2026-07-10 | Validated synthetic udev trigger starts the mount service |
 | 0.6 | 2026-07-10 | Day 3 complete: physical USB unplug/re-plug auto-mount validated (`/dev/sdb1`) |
 | 0.7 | 2026-07-10 | EICAR threat path validated; GATE-004 resolved to `clamd` + `clamdscan --fdpass`; clamd setup/benchmark tooling added |
+| 0.8 | 2026-07-11 | Agreed strict `clamdscan` policy: no automatic `clamscan` fallback; keep full DB by default |
 
 ---
 
